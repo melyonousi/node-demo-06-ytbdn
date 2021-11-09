@@ -1,0 +1,45 @@
+<div class="youtube">
+    <div class="youtube-container">
+        <div class="youtube-container-content">
+            <div class="youtube-container-content-y">
+                <div class="youtube-container-content-y-form">
+                    <form action="search" method="GET">
+                        <div class="youtube-container-content-y-form-group">
+                            <label for="url">Video URL</label>
+                            <input type="url" name="url" placeholder="https://www.youtube.com/watch?v=MtN1.."
+                                required />
+                        </div>
+                        <div class="youtube-container-content-y-form-group">
+                            <input class="btn" type="submit" value="Search" />
+                        </div>
+                    </form>
+                </div>
+            </div>
+            <div class="youtube-container-content-bg">
+                <div class="youtube-container-content-bg-form">
+                    {{#if youtube}}
+                    <h3>{{title}}</h3>
+                    {{#each youtube}}
+                    <div class="video">
+                        <img src="{{this.image}}" alt="{{title}}">
+                        <div class="download">
+                            <a href="{{this.url}}" download="{{title}}.mp4" target="_blank">
+                                <svg xmlns="http://www.w3.org/2000/svg" enable-background="new 0 0 24 24" height="24px"
+                                    viewBox="0 0 24 24" width="24px" fill="#f5f5f5">
+                                    <g>
+                                        <path d="M5,20h14v-2H5V20z M19,9h-4V3H9v6H5l7,7L19,9z" />
+                                    </g>
+                                </svg>
+                                <span>{{this.label}}</span>
+                            </a>
+                        </div>
+                    </div>
+                    {{/each}}
+                    {{else}}
+                    <h3>{{title}}</h3>
+                    {{/if}}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
