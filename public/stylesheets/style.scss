@@ -94,7 +94,7 @@
                             border-radius: 6px;
                         }
                         .download {
-                            a {
+                            .submit {
                                 border: none;
                                 outline: none;
                                 display: flex;
@@ -157,7 +157,7 @@
                                 height: 30%;
                             }
                             .download {
-                                a {
+                                .submit {
                                     font-size: medium;
                                 }
                             }

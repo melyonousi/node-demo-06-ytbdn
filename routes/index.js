@@ -1,5 +1,6 @@
-var express = require('express');
-var router = express.Router();
+const fs = require('fs')
+const express = require('express');
+const router = express.Router();
 const ytdl = require('ytdl-core');
 
 /* GET home page. */
@@ -14,19 +15,23 @@ router.get('/search', async(req, res) => {
 
         const images = info.player_response.microformat.playerMicroformatRenderer.thumbnail.thumbnails
         let image = ''
-        for (let i = 0; i < images.length; i++) {
-            image = images[i].url
-        }
+        images.forEach(item => {
+            image = item.url
+        })
 
         const array = info.player_response.streamingData.formats
         let youtube = []
-        for (let i = 0; i < array.length; i++) {
+        array.forEach(item => {
             youtube.push({
-                url: array[i].url,
-                label: array[i].qualityLabel,
-                image: image
+                link: req.query.url,
+                url: item.url,
+                qualityLabel: item.qualityLabel,
+                image: image,
+                itag: item.itag,
+                quality: item.quality,
             })
-        }
+        });
+
         res.render("index", {
             title: info.player_response.videoDetails.title,
             image: image,
@@ -38,27 +43,19 @@ router.get('/search', async(req, res) => {
         })
     }
 
-    // let format = ytdl.chooseFormat(info.formats, { quality: '134' });
 
-
-
-    // res.send({
-    //         info: {
-    //             title: info.player_response.videoDetails.title,
-    //             image: image
-    //         },
-    //         info: youtube
-    //     })
-
-
-    // res.header("Content-Disposition", 'attachment;\  filename="Video.mp4"');
-    // ytdl(url, { filter: format => format.container === 'mp4' }).pipe(res);
 });
 
-// router.get('/download', async(req, res) => {
-//     window.location.href = req.query.url
-//         // res.header("Content-Disposition", 'attachment;\  filename="Video.mp4"');
-//         // ytdl(req.query.url).pipe(res);
-// });
+router.get('/download', async(req, res) => {
+
+    const infos = {
+        link: req.query.link,
+        itag: req.query.itag,
+    }
+    res.header("Content-Disposition", 'attachment;\  filename="' + ytdl.getURLVideoID(infos.link) + '.mp4"');
+    const info = await ytdl.getInfo(infos.link);
+    const format = ytdl.chooseFormat(info.formats, { quality: infos.itag });
+    ytdl(infos.link, { format: format }).pipe(res);
+});
 
 module.exports = router;

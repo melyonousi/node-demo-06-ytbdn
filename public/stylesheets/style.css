@@ -157,7 +157,7 @@
   border-radius: 6px;
 }
 
-.youtube-container-content-bg-form .video .download a {
+.youtube-container-content-bg-form .video .download .submit {
   border: none;
   outline: none;
   display: -webkit-box;
@@ -181,7 +181,7 @@
   text-decoration: none;
 }
 
-.youtube-container-content-bg-form .video .download a:hover {
+.youtube-container-content-bg-form .video .download .submit:hover {
   opacity: 0.8;
   cursor: pointer;
 }
@@ -225,7 +225,7 @@
     width: 30%;
     height: 30%;
   }
-  .youtube-container-content-bg-form .video .download a {
+  .youtube-container-content-bg-form .video .download .submit {
     font-size: medium;
   }
 }
