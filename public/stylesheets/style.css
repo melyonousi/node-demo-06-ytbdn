@@ -43,6 +43,13 @@
   background-color: slateblue;
 }
 
+.youtube-container-content-y .link {
+  color: whitesmoke;
+  background-color: rgba(255, 255, 255, 0.3);
+  padding: 6px;
+  border-radius: 3px;
+}
+
 .youtube-container-content-y-form {
   width: 100%;
   display: -webkit-box;
@@ -101,7 +108,7 @@
 }
 
 .youtube-container-content-bg {
-  overflow-y: auto;
+  overflow-y: scroll;
   -ms-flex-preferred-size: 60%;
       flex-basis: 60%;
   background-color: slateblue;
@@ -121,6 +128,10 @@
 }
 
 .youtube-container-content-bg-form {
+  height: -webkit-fit-content;
+  height: -moz-fit-content;
+  height: fit-content;
+  max-height: 100%;
   width: 90%;
   border-radius: 3px;
   padding: 16px;
@@ -155,6 +166,24 @@
   width: 40%;
   height: 40%;
   border-radius: 6px;
+}
+
+.youtube-container-content-bg-form .video .info {
+  padding: 0 10px;
+  width: 100%;
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-box-orient: vertical;
+  -webkit-box-direction: normal;
+      -ms-flex-direction: column;
+          flex-direction: column;
+  -webkit-box-pack: start;
+      -ms-flex-pack: start;
+          justify-content: flex-start;
+  -webkit-box-align: start;
+      -ms-flex-align: start;
+          align-items: flex-start;
 }
 
 .youtube-container-content-bg-form .video .download .submit {
@@ -195,6 +224,10 @@
             flex-direction: column-reverse;
   }
   .youtube-container-content-y {
+    -webkit-box-orient: vertical;
+    -webkit-box-direction: reverse;
+        -ms-flex-direction: column-reverse;
+            flex-direction: column-reverse;
     -ms-flex-preferred-size: 30%;
         flex-basis: 30%;
   }

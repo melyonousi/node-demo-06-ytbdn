@@ -2,13 +2,12 @@
     <div class="youtube-container">
         <div class="youtube-container-content">
             <div class="youtube-container-content-y">
-                <a href="/playlist" class="link" rel="noopener noreferrer">To Download Playlist</a>
+                <a href="/" class="link" rel="noopener noreferrer">To Download Video</a>
                 <div class="youtube-container-content-y-form">
-                    <form action="search" method="GET">
+                    <form action="searchplaylist" method="GET">
                         <div class="youtube-container-content-y-form-group">
-                            <label for="url">Video URL</label>
-                            <input type="url" name="url" placeholder="..."
-                                required />
+                            <label for="url">PlayList URL</label>
+                            <input type="url" name="url" placeholder="..." required />
                         </div>
                         <div class="youtube-container-content-y-form-group">
                             <input class="btn" type="submit" value="Search" />
@@ -20,22 +19,27 @@
                 <div class="youtube-container-content-bg-form">
                     {{#if youtube}}
                     <h3>{{title}}</h3>
+                    <h3>{{count}}</h3>
                     {{#each youtube}}
                     <div class="video">
                         <img src="{{this.image}}" alt="{{title}}">
+                        <div class="info">
+                            <p>title: {{this.title}}</p>
+                            <p>duration: {{this.duration}}</p>
+                            <p>index: {{this.index}}</p>
+                        </div>
                         <div class="download">
                             <form action="download" method="GET">
-                                <input type="hidden" name="link" value="{{this.link}}">
-                                <input type="hidden" name="itag" value="{{this.itag}}">
-                                <a class="submit" href="{{this.url}}" target="_blank">
+                                <input type="hidden" name="link" value="{{this.url}}">
+                                <button class="submit" type="submit">
                                     <svg xmlns="http://www.w3.org/2000/svg" enable-background="new 0 0 24 24"
                                         height="24px" viewBox="0 0 24 24" width="24px" fill="#f5f5f5">
                                         <g>
                                             <path d="M5,20h14v-2H5V20z M19,9h-4V3H9v6H5l7,7L19,9z" />
                                         </g>
                                     </svg>
-                                    <span>{{this.qualityLabel}}</span>
-                                </a>
+                                    {{!-- <span>{{this.qualityLabel}}</span> --}}
+                                </button>
                             </form>
                         </div>
                     </div>
