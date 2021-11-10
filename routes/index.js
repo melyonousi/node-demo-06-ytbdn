@@ -98,38 +98,4 @@ router.get('/download', async(req, res) => {
     ytdl(infos.link, { format: format }).pipe(res);
 });
 
-router.get('/downloadall', async(req, res) => {
-    res.send(req.query.url)
-    const urlytpl = (req.query.url).split("list=")[1].split("&")[0]
-    if (await ytpl.validateID(urlytpl)) {
-        const playlist = await ytpl(urlytpl, { pages: 50 });
-        let youtubeplaylist = []
-
-        playlist.items.forEach(item => {
-            res.header("Content-Disposition", 'attachment;\  filename="' + ytdl.getURLVideoID(item.url) + '.mp4"');
-            const info = await ytdl.getInfo(item.url);
-            const format = ytdl.chooseFormat(info.formats, { quality: 'highest' });
-            ytdl(infos.link, { format: format }).pipe(res);
-
-            youtubeplaylist.push({
-                // link: req.query.url,
-                // qualityLabel: item.qualityLabel,
-                image: item.bestThumbnail.url,
-                // itag: item.itag,
-                // quality: item.quality,
-                title: item.title,
-                index: item.index,
-                id: item.id,
-                duration: item.duration,
-                url: item.shortUrl,
-                titleLength: item.title.length
-            })
-        });
-    }
-    const infos = {
-        link: req.query.link,
-    }
-
-});
-
 module.exports = router;
