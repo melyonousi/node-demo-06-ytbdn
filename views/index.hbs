@@ -3,7 +3,7 @@
         <div class="youtube-container-content">
             <div class="youtube-container-content-y">
                 <a href="/playlist" class="link" rel="noopener noreferrer">To Download Playlist</a>
-                <div class="youtube-container-content-y-form">
+                <div class="youtube-container-content-y-form" aria-checked="true">
                     <form action="search" method="GET">
                         <div class="youtube-container-content-y-form-group">
                             <label for="url">Video URL</label>
@@ -27,7 +27,7 @@
                             <form action="download" method="GET">
                                 <input type="hidden" name="link" value="{{this.link}}">
                                 <input type="hidden" name="itag" value="{{this.itag}}">
-                                <a class="submit" href="{{this.url}}" target="_blank">
+                                <a class="submit" href="{{this.url}}" target="_blank" rel="noopener noreferrer">
                                     <svg xmlns="http://www.w3.org/2000/svg" enable-background="new 0 0 24 24"
                                         height="24px" viewBox="0 0 24 24" width="24px" fill="#f5f5f5">
                                         <g>
