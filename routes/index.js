@@ -51,8 +51,7 @@ router.get('/playlist', async(req, res) => {
 
 router.get('/searchplaylist', async(req, res) => {
     try {
-        const urlytpl = (req.query.url).split("&")[1].split('=')[1]
-            // res.send(urlytpl)
+        const urlytpl = (req.query.url).split("list=")[1].split("&")[0]
         if (await ytpl.validateID(urlytpl)) {
             const playlist = await ytpl(urlytpl, { pages: 50 });
             let youtubeplaylist = []
