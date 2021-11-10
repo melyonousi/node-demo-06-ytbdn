@@ -1,4 +1,3 @@
-const fs = require('fs')
 const express = require('express');
 const router = express.Router();
 const ytdl = require('ytdl-core');
@@ -6,7 +5,7 @@ const ytpl = require('ytpl');
 
 /* GET home page. */
 router.get('/', function(req, res, next) {
-    res.render('index', { title: 'Youtube Downloader Video' });
+    res.render('index', { title: 'YTBDN (Youtube Downloader Video)' });
 });
 
 router.get('/search', async(req, res) => {
@@ -34,19 +33,18 @@ router.get('/search', async(req, res) => {
         });
 
         res.render("index", {
-            title: info.player_response.videoDetails.title,
-            // image: image,
+            title: `YTBDN (${info.player_response.videoDetails.title})`,
             youtube: youtube
         })
     } catch (error) {
         res.render("index", {
-            title: 'URL youtube video not found, please past a valid youtube URL.',
+            title: 'YTBDN (URL youtube video not found, please past a valid youtube URL).',
         })
     }
 });
 
 router.get('/playlist', async(req, res) => {
-    res.render('playlist', { title: 'Youtube Downloader Playlist' })
+    res.render('playlist', { title: 'YTBDN (Youtube Downloader Playlist)' })
 })
 
 router.get('/searchplaylist', async(req, res) => {
@@ -58,11 +56,7 @@ router.get('/searchplaylist', async(req, res) => {
 
             playlist.items.forEach(item => {
                 youtubeplaylist.push({
-                    // link: req.query.url,
-                    // qualityLabel: item.qualityLabel,
                     image: item.bestThumbnail.url,
-                    // itag: item.itag,
-                    // quality: item.quality,
                     title: item.title,
                     index: item.index,
                     id: item.id,
@@ -71,19 +65,12 @@ router.get('/searchplaylist', async(req, res) => {
                     titleLength: item.title.length
                 })
             });
-            // res.send(playlist.items)
-            // res.send({
-            //     title: playlist.title,
-            //     count: playlist.estimatedItemCount,
-            //     description: playlist.description,
-            //     items: playlist
-            // })
-            res.render('playlist', { title: `${playlist.title}(${playlist.estimatedItemCount})`, count: playlist.estimatedItemCount, playlistUrl: playlist.url, youtube: youtubeplaylist })
+            res.render('playlist', { title: `YTBDN (${playlist.title} '${playlist.estimatedItemCount}')`, count: playlist.estimatedItemCount, playlistUrl: playlist.url, youtube: youtubeplaylist })
         } else {
-            res.render('playlist', { title: 'playlist not found' })
+            res.render('playlist', { title: 'YTBDN (playlist not found)' })
         }
     } catch (error) {
-        res.render('playlist', { title: 'playlist not found' })
+        res.render('playlist', { title: 'YTBDN (playlist not found)' })
     }
 })
 
