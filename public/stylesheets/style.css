@@ -215,6 +215,29 @@
   cursor: pointer;
 }
 
+.youtube-container-articles {
+  padding: 16px;
+  background-color: slateblue;
+  border-radius: 3px;
+  color: whitesmoke;
+  font-size: large;
+}
+
+.youtube-container-articles-article {
+  margin: 16px;
+  padding: 20px;
+  border-radius: 6px;
+  text-align: justify;
+  background-color: rgba(199, 23, 155, 0.849);
+}
+
+.youtube-container-articles-article h1 {
+  background-color: tomato;
+  width: -webkit-fit-content;
+  width: -moz-fit-content;
+  width: fit-content;
+}
+
 @media only screen and (max-width: 768px) {
   .youtube-container-content {
     font-size: medium;

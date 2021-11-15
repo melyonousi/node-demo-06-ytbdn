@@ -133,6 +133,24 @@
                 }
             }
         }
+        &-articles {
+            padding: 16px;
+            background-color: slateblue;
+            border-radius: 3px;
+            color: whitesmoke;
+            font-size: large;
+            &-article {
+                margin: 16px;
+                padding: 20px;
+                border-radius: 6px;
+                text-align: justify;
+                background-color: rgba(199, 23, 155, 0.849);
+                h1 {
+                    background-color: tomato;
+                    width: fit-content;
+                }
+            }
+        }
     }
 }
 
