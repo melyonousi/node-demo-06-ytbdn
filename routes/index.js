@@ -19,6 +19,16 @@ router.get('/search', async(req, res) => {
             image = item.url
         })
 
+        const arrayAudio = info.player_response.streamingData.adaptiveFormats.filter(item => { return item.mimeType.includes('audio/mp4') })
+        let youtubeAudio = []
+        arrayAudio.forEach(item => {
+            youtubeAudio.push({
+                url: item.url,
+                mimeType: item.mimeType.split(';')[0],
+                audioQuality: item.audioQuality
+            })
+        });
+
         const array = info.player_response.streamingData.formats
         let youtube = []
         array.forEach(item => {
@@ -34,7 +44,8 @@ router.get('/search', async(req, res) => {
 
         res.render("index", {
             title: `YTBDN (${info.player_response.videoDetails.title})`,
-            youtube: youtube
+            youtube: youtube,
+            youtubeAudio: youtubeAudio
         })
     } catch (error) {
         res.render("index", {
@@ -53,7 +64,6 @@ router.get('/searchplaylist', async(req, res) => {
         if (await ytpl.validateID(urlytpl)) {
             const playlist = await ytpl(urlytpl, { pages: 50 });
             let youtubeplaylist = []
-
             playlist.items.forEach(item => {
                 youtubeplaylist.push({
                     image: item.bestThumbnail.url,
