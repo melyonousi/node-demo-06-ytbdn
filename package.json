@@ -5,10 +5,11 @@
     "private": true,
     "main": "app.js",
     "scripts": {
-        "start": "node ./bin/www"
+        "start": "node ./bin/www",
+        "//": "port = 3000"
     },
     "keywords": [],
-    "author": "",
+    "author": "Mohamed EL YONOUSI",
     "license": "ISC",
     "dependencies": {
         "cookie-parser": "~1.4.4",
