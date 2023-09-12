@@ -112,6 +112,8 @@ router.get('/download-video', async (req, res) => {
                     format.hasAudio &&
                     format.hasAudio
             });
+
+        res.setHeader('Content-Length', format.contentLength);
         ytdl(videoUrl, { format: format }).pipe(res);
 
     } catch (error) {
@@ -136,6 +138,7 @@ router.get('/download-audio', async (req, res) => {
 
         res.setHeader('Content-Disposition', `attachment; filename="${encodeURI(videoTitle)}.mp3"`);
         res.setHeader('Content-Type', 'audio/mp3');
+        res.setHeader('Content-Length', audioFormat.contentLength);
 
         ytdl(videoUrl, { format: audioFormat }).pipe(res);
     } catch (error) {
