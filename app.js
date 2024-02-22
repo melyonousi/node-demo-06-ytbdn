@@ -2,12 +2,13 @@ const express = require('express');
 const indexRouter = require('./routes/index');
 const cors = require('cors')
 const app = express();
+require('dotenv').config()
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
 app.use(cors({
-    origin: ['https://angular-demo-07-ytbdn.netlify.app', 'https://ytbdn.casetrue.com', 'http://localhost:4200']
+    origin: [process.env.FRONT_URL]
 }))
 
 app.get('', (req, res) => {

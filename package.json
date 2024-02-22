@@ -8,13 +8,20 @@
         "start": "node ./app.js",
         "watch": "node --watch ./app.js"
     },
-    "keywords": ["API", "NODEJS", "ANGULAR"],
+    "keywords": [
+        "API",
+        "NODEJS",
+        "ANGULAR"
+    ],
     "author": "Mohamed EL YONOUSI",
     "license": "ISC",
     "dependencies": {
+        "cors": "^2.8.5",
         "express": "~4.16.1",
         "ytdl-core": "^4.9.1",
-        "ytpl": "^2.2.3",
-        "cors": "^2.8.5"
+        "ytpl": "^2.2.3"
+    },
+    "devDependencies": {
+        "dotenv": "^16.4.5"
     }
 }
