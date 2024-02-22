@@ -1,66 +1,61 @@
 const express = require('express');
-const { format } = require('morgan');
 const router = express.Router();
 const ytdl = require('ytdl-core');
 const ytpl = require('ytpl');
 
-/* GET home page. */
-router.get('/', function (req, res, next) {
-    res.render('index', { title: 'YTBDN (Youtube Downloader Video)' });
-});
-
-router.get('/search', async (req, res) => {
+router.get('/search-video-audio', async (req, res) => {
     try {
         const url = ytdl.getURLVideoID(req.query.url)
         const info = await ytdl.getInfo(url);
-
         const images = info.player_response.microformat.playerMicroformatRenderer.thumbnail.thumbnails
-        let image = ''
-        images.forEach(item => {
-            image = item.url
-        })
-
-        const arrayAudio = info.player_response.streamingData.adaptiveFormats.filter(item => { return item.mimeType.includes('audio/mp4') })
-        let youtubeAudio = []
-        arrayAudio.forEach(item => {
-            youtubeAudio.push({
-                link: req.query.url,
-                url: item.url,
-                mimeType: item.mimeType.split(';')[0],
-                audioQuality: item.audioQuality
-            })
-        });
-
         const array = info.player_response.streamingData.formats
-        let youtube = []
+        const youtube = []
         array.forEach(item => {
             youtube.push({
                 link: req.query.url,
                 url: item.url,
                 qualityLabel: item.qualityLabel,
-                image: image,
+                image: images.slice(-1)[0].url,
                 itag: item.itag,
                 quality: item.quality,
+                audioQuality: item.audioQuality
             })
         });
 
-        res.render("index", {
-            title: `YTBDN (${info.player_response.videoDetails.title})`,
-            youtube: youtube,
-            youtubeAudio: youtubeAudio
-        })
+        if (array.length <= 0) {
+            res.status(404).json({ error: "Can't Find a video" })
+        } else {
+            res.status(200).json({
+                title: info.player_response.videoDetails.title,
+                youtube
+            })
+        }
     } catch (error) {
-        res.render("index", {
-            title: 'YTBDN (URL youtube video not found, please past a valid youtube URL).',
-        })
+        res.status(404).json({ error: error })
     }
 });
 
-router.get('/playlist', async (req, res) => {
-    res.render('playlist', { title: 'YTBDN (Youtube Downloader Playlist)' })
-})
+router.get('/search-audio', async (req, res) => {
+    try {
+        const url = req.query.url
+        const info = await ytdl.getInfo(ytdl.getURLVideoID(url));
+        const arrayAudio = info.player_response.streamingData.adaptiveFormats.filter(item => item.mimeType.includes('audio/mp4'));
+        const youtubeAudio = [];
+        arrayAudio.forEach((item) => {
+            youtubeAudio.push({
+                link: url,
+                url: item.url,
+                mimeType: item.mimeType.split(';')[0],
+                audioQuality: item.audioQuality
+            });
+        });
+        res.status(200).json({ title: info.player_response.videoDetails.title, youtubeAudio })
+    } catch (error) {
+        res.status(404).json({ error: error })
+    }
+});
 
-router.get('/searchplaylist', async (req, res) => {
+router.get('/search-playlist', async (req, res) => {
     try {
         const urlytpl = (req.query.url).split("list=")[1].split("&")[0]
         if (ytpl.validateID(urlytpl)) {
@@ -79,20 +74,9 @@ router.get('/searchplaylist', async (req, res) => {
                     qualityLabels: qualityLabels
                 })
             };
-
-            res.render('playlist',
-                {
-                    title: `YTBDN ${playlist.title} (${playlist.estimatedItemCount})`,
-                    count: playlist.estimatedItemCount,
-                    playlistUrl: playlist.url,
-                    youtube: youtubeplaylist
-                })
-        } else {
-            res.render('playlist', { title: 'YTBDN (playlist not found)' })
-        }
-    } catch (error) {
-        res.render('playlist', { title: 'YTBDN (playlist not found)' })
-    }
+            res.status(200).json({ title: `${playlist.estimatedItemCount} - ${playlist.title}`, youtube: youtubeplaylist })
+        } else { res.status(404).json({ error: 'Playlist Not Found' }) }
+    } catch (error) { res.status(404).json({ error: error.message }) }
 })
 
 router.get('/download-video', async (req, res) => {
@@ -119,7 +103,7 @@ router.get('/download-video', async (req, res) => {
         ytdl(videoUrl, { format: format }).pipe(res);
 
     } catch (error) {
-        res.render('index', { title: 'Failed to fetch video info or the video is not available.' });
+        res.status(400).json({ title: 'Failed to fetch video info or the video is not available.' })
     }
 });
 
@@ -146,7 +130,7 @@ router.get('/download-audio', async (req, res) => {
 
         ytdl(videoUrl, { format: audioFormat }).pipe(res);
     } catch (error) {
-        res.render('index', { title: 'Failed to fetch aduio info or the aduio is not available.' });
+        res.status(404).json({ title: error.message })
     }
 });
 
