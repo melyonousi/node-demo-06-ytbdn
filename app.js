@@ -12,7 +12,7 @@ app.use(cors({
 }))
 
 app.get('', (req, res) => {
-    res.status(200).json({ success: 'YTBDN | Youtube Downloader' })
+    res.redirect(process.env.FRONT_URL)
 })
 app.use('/api', indexRouter);
 
