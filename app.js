@@ -10,7 +10,7 @@ app.use(express.urlencoded({ extended: false }));
 app.use(cors())
 
 app.get('', (req, res) => {
-    res.redirect(process.env.FRONT_URL)
+    res.status(200).json({ front: process.env.FRONT_URL })
 })
 app.use('/api', indexRouter);
 
