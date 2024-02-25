@@ -7,9 +7,7 @@ require('dotenv').config()
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-app.use(cors({
-    origin: [process.env.FRONT_URL]
-}))
+app.use(cors())
 
 app.get('', (req, res) => {
     res.redirect(process.env.FRONT_URL)
