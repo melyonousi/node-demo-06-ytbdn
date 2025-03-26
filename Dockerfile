@@ -1,26 +1,26 @@
-# Use an official Node base image that has apt-get
+# Use a Node base image
 FROM node:18
 
-# Install Python & pip, so we can install yt-dlp
+# Install Python and pip
 RUN apt-get update && apt-get install -y python3 python3-pip
 
-# Install yt-dlp
+# Install yt-dlp globally
 RUN pip3 install yt-dlp
 
-# Set the working directory inside the container
+# (Optional) confirm the binary is accessible
+RUN ln -s /usr/local/bin/yt-dlp /usr/bin/yt-dlp
+
 WORKDIR /app
 
-# Copy package.json and package-lock.json (if any)
+# Copy your Node files and install
 COPY package*.json ./
-
-# Install NPM dependencies
 RUN npm install
 
-# Copy the rest of the source code
+# Copy in the rest of your code
 COPY . .
 
-# Expose the port your app runs on (assuming it's 3000)
-EXPOSE 3000
+# Build (if needed)
+# RUN npm run build
 
-# Start the app
+EXPOSE 3000
 CMD ["npm", "start"]
