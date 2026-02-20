@@ -7,14 +7,17 @@ const crypto = require('crypto');
 const YTDlpWrap = require('yt-dlp-wrap').default;
 const { spawn, spawnSync } = require('child_process');
 
+const isVercelRuntime = Boolean(process.env.VERCEL || process.env.NOW_REGION);
+const writableRuntimeDir = process.env.YTBDN_RUNTIME_DIR
+    || (isVercelRuntime ? '/tmp' : path.join(__dirname, '..'));
+
 const localYtDlpBinary = path.join(
-    __dirname,
-    '..',
+    writableRuntimeDir,
     'bin',
     process.platform === 'win32' ? 'yt-dlp.exe' : 'yt-dlp'
 );
 
-const tempDownloadDir = path.join(__dirname, '..', 'tmp-downloads');
+const tempDownloadDir = process.env.TMP_DOWNLOAD_DIR || path.join(writableRuntimeDir, 'tmp-downloads');
 
 const downloadJobs = new Map();
 const READY_JOB_TTL_MS = 20 * 60 * 1000;
