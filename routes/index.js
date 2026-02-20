@@ -232,6 +232,11 @@ function getMp3QualityValue(audioQuality) {
 const hasNodeJsRuntime = isCommandAvailable('node');
 const configuredExtractorArgs = String(process.env.YT_DLP_EXTRACTOR_ARGS || '').trim();
 const forceIpv4 = process.env.YT_DLP_FORCE_IPV4 !== '0';
+const defaultRetryExtractorArgs = Object.freeze([
+    'youtube:player_client=web',
+    'youtube:player_client=web_safari',
+    'youtube:player_client=tv,web'
+]);
 
 function getYtDlpSharedArgs(options = {}) {
     const { includeFfmpeg = false } = options;
@@ -254,6 +259,115 @@ function getYtDlpSharedArgs(options = {}) {
     }
 
     return sharedArgs;
+}
+
+function parseRetryExtractorArgsFromEnv() {
+    const rawValue = String(process.env.YT_DLP_RETRY_EXTRACTOR_ARGS || '').trim();
+    if (!rawValue) {
+        return defaultRetryExtractorArgs;
+    }
+
+    const parsed = rawValue
+        .split('|')
+        .map((item) => item.trim())
+        .filter(Boolean);
+
+    return parsed.length > 0 ? parsed : defaultRetryExtractorArgs;
+}
+
+function shouldRetryYtDlpWithAlternateProfile(errorMessage) {
+    const text = String(errorMessage || '').toLowerCase();
+    return text.includes('http error 403') || text.includes('unable to download video data');
+}
+
+function buildYtDlpSharedArgProfiles(options = {}) {
+    const baseArgs = getYtDlpSharedArgs(options);
+    const profiles = [baseArgs];
+
+    if (configuredExtractorArgs) {
+        return profiles;
+    }
+
+    for (const extractorArgs of parseRetryExtractorArgsFromEnv()) {
+        profiles.push([...baseArgs, '--extractor-args', extractorArgs]);
+    }
+
+    return profiles;
+}
+
+function executeYtDlpProcess(args, options = {}) {
+    const { onProgress } = options;
+
+    return new Promise((resolve, reject) => {
+        const ytDlpProcess = spawnYtDlp(args);
+        let processOutput = '';
+        let stderrBuffer = '';
+        let stdoutBuffer = '';
+
+        const handleLine = (line, source) => {
+            if (!line) {
+                return;
+            }
+
+            processOutput += `${line}\n`;
+
+            if (source === 'stderr') {
+                console.error(`yt-dlp stderr: ${line}`);
+            }
+
+            const progress = extractProgressPercent(line);
+            if (progress !== null && typeof onProgress === 'function') {
+                onProgress(progress, line);
+            }
+        };
+
+        const consumeBuffer = (chunk, source) => {
+            if (source === 'stderr') {
+                stderrBuffer += chunk.toString();
+                const lines = stderrBuffer.split(/\r?\n/);
+                stderrBuffer = lines.pop() || '';
+
+                for (const line of lines) {
+                    handleLine(line.trim(), source);
+                }
+
+                return;
+            }
+
+            stdoutBuffer += chunk.toString();
+            const lines = stdoutBuffer.split(/\r?\n/);
+            stdoutBuffer = lines.pop() || '';
+
+            for (const line of lines) {
+                handleLine(line.trim(), source);
+            }
+        };
+
+        ytDlpProcess.stderr.on('data', (chunk) => consumeBuffer(chunk, 'stderr'));
+        ytDlpProcess.stdout.on('data', (chunk) => consumeBuffer(chunk, 'stdout'));
+
+        ytDlpProcess.on('error', (error) => {
+            reject(new Error(processOutput || error.message));
+        });
+
+        ytDlpProcess.on('close', (code) => {
+            if (stderrBuffer.trim()) {
+                handleLine(stderrBuffer.trim(), 'stderr');
+                stderrBuffer = '';
+            }
+
+            if (stdoutBuffer.trim()) {
+                handleLine(stdoutBuffer.trim(), 'stdout');
+                stdoutBuffer = '';
+            }
+
+            if (code !== 0) {
+                return reject(new Error(processOutput || `yt-dlp exited with code ${code}`));
+            }
+
+            resolve();
+        });
+    });
 }
 
 function clampNumber(value, min, max) {
@@ -349,80 +463,32 @@ setInterval(() => {
 }, CLEANUP_INTERVAL_MS).unref();
 
 async function runYtDlpCommand(args, options = {}) {
-    const { onProgress } = options;
-
     await ensureYtDlpBinary();
+    const sharedArgProfiles = buildYtDlpSharedArgProfiles({ includeFfmpeg: true });
+    let latestError = null;
 
-    return new Promise((resolve, reject) => {
-        const ytDlpProcess = spawnYtDlp([...getYtDlpSharedArgs({ includeFfmpeg: true }), ...args]);
-        let processOutput = '';
-        let stderrBuffer = '';
-        let stdoutBuffer = '';
+    for (let index = 0; index < sharedArgProfiles.length; index += 1) {
+        const sharedArgs = sharedArgProfiles[index];
+        const hasMoreProfiles = index < sharedArgProfiles.length - 1;
 
-        const handleLine = (line, source) => {
-            if (!line) {
-                return;
+        try {
+            await executeYtDlpProcess([...sharedArgs, ...args], options);
+            return;
+        } catch (error) {
+            latestError = error;
+
+            const shouldRetry = hasMoreProfiles
+                && shouldRetryYtDlpWithAlternateProfile(error?.message);
+
+            if (!shouldRetry) {
+                throw error;
             }
 
-            processOutput += `${line}\n`;
+            console.warn('yt-dlp returned HTTP 403; retrying with an alternate extractor profile');
+        }
+    }
 
-            if (source === 'stderr') {
-                console.error(`yt-dlp stderr: ${line}`);
-            }
-
-            const progress = extractProgressPercent(line);
-            if (progress !== null && typeof onProgress === 'function') {
-                onProgress(progress, line);
-            }
-        };
-
-        const consumeBuffer = (chunk, source) => {
-            if (source === 'stderr') {
-                stderrBuffer += chunk.toString();
-                const lines = stderrBuffer.split(/\r?\n/);
-                stderrBuffer = lines.pop() || '';
-
-                for (const line of lines) {
-                    handleLine(line.trim(), source);
-                }
-
-                return;
-            }
-
-            stdoutBuffer += chunk.toString();
-            const lines = stdoutBuffer.split(/\r?\n/);
-            stdoutBuffer = lines.pop() || '';
-
-            for (const line of lines) {
-                handleLine(line.trim(), source);
-            }
-        };
-
-        ytDlpProcess.stderr.on('data', (chunk) => consumeBuffer(chunk, 'stderr'));
-        ytDlpProcess.stdout.on('data', (chunk) => consumeBuffer(chunk, 'stdout'));
-
-        ytDlpProcess.on('error', (error) => {
-            reject(new Error(processOutput || error.message));
-        });
-
-        ytDlpProcess.on('close', (code) => {
-            if (stderrBuffer.trim()) {
-                handleLine(stderrBuffer.trim(), 'stderr');
-                stderrBuffer = '';
-            }
-
-            if (stdoutBuffer.trim()) {
-                handleLine(stdoutBuffer.trim(), 'stdout');
-                stdoutBuffer = '';
-            }
-
-            if (code !== 0) {
-                return reject(new Error(processOutput || `yt-dlp exited with code ${code}`));
-            }
-
-            resolve();
-        });
-    });
+    throw latestError || new Error('yt-dlp command failed');
 }
 
 async function sendTempFile(res, filePath, fileName, contentType) {
