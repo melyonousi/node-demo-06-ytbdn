@@ -6,6 +6,13 @@ const path = require('path');
 const crypto = require('crypto');
 const YTDlpWrap = require('yt-dlp-wrap').default;
 const { spawn, spawnSync } = require('child_process');
+let ffmpegBinary = null;
+
+try {
+    ffmpegBinary = require('ffmpeg-static');
+} catch (_) {
+    ffmpegBinary = null;
+}
 
 const localYtDlpBinary = path.join(
     __dirname,
@@ -223,15 +230,27 @@ function getMp3QualityValue(audioQuality) {
 }
 
 const hasNodeJsRuntime = isCommandAvailable('node');
+const configuredExtractorArgs = String(process.env.YT_DLP_EXTRACTOR_ARGS || '').trim();
+const forceIpv4 = process.env.YT_DLP_FORCE_IPV4 !== '0';
 
-function getYtDlpSharedArgs() {
-    const sharedArgs = [
-        '--extractor-args',
-        'youtube:player_client=android_sdkless'
-    ];
+function getYtDlpSharedArgs(options = {}) {
+    const { includeFfmpeg = false } = options;
+    const sharedArgs = [];
 
     if (hasNodeJsRuntime) {
-        sharedArgs.unshift('--js-runtimes', 'node');
+        sharedArgs.push('--js-runtimes', 'node');
+    }
+
+    if (forceIpv4) {
+        sharedArgs.push('--force-ipv4');
+    }
+
+    if (configuredExtractorArgs) {
+        sharedArgs.push('--extractor-args', configuredExtractorArgs);
+    }
+
+    if (includeFfmpeg && ffmpegBinary) {
+        sharedArgs.push('--ffmpeg-location', ffmpegBinary);
     }
 
     return sharedArgs;
@@ -335,7 +354,7 @@ async function runYtDlpCommand(args, options = {}) {
     await ensureYtDlpBinary();
 
     return new Promise((resolve, reject) => {
-        const ytDlpProcess = spawnYtDlp([...getYtDlpSharedArgs(), ...args]);
+        const ytDlpProcess = spawnYtDlp([...getYtDlpSharedArgs({ includeFfmpeg: true }), ...args]);
         let processOutput = '';
         let stderrBuffer = '';
         let stdoutBuffer = '';
