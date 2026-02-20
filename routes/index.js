@@ -348,6 +348,18 @@ function parseRetryExtractorArgsFromEnv() {
 
 function shouldRetryYtDlpWithAlternateProfile(errorMessage) {
     const text = String(errorMessage || '').toLowerCase();
+    const isAuthBotCheck = text.includes('sign in to confirm you\'re not a bot')
+        || text.includes('use --cookies-from-browser or --cookies for the authentication');
+    if (isAuthBotCheck) {
+        return false;
+    }
+
+    const isUnrecoverableFormatIssue = text.includes('requested format is not available')
+        || text.includes('this video is drm protected');
+    if (isUnrecoverableFormatIssue) {
+        return false;
+    }
+
     return text.includes('http error 403') || text.includes('unable to download video data');
 }
 
