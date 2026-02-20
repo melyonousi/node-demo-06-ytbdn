@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const fs = require('fs');
 const fsp = fs.promises;
+const os = require('os');
 const path = require('path');
 const crypto = require('crypto');
 const YTDlpWrap = require('yt-dlp-wrap').default;
@@ -237,6 +238,18 @@ const defaultRetryExtractorArgs = Object.freeze([
     'youtube:player_client=web_safari',
     'youtube:player_client=tv,web'
 ]);
+const configuredCookiesPath = String(
+    process.env.YT_DLP_COOKIES_PATH
+    || process.env.YT_DLP_COOKIE_FILE
+    || ''
+).trim();
+const configuredCookiesInline = String(process.env.YT_DLP_COOKIES || '').trim();
+const configuredCookiesBase64 = String(process.env.YT_DLP_COOKIES_BASE64 || '').trim();
+const cookiesRuntimeDir = String(process.env.YT_DLP_COOKIE_RUNTIME_DIR || '').trim() || os.tmpdir();
+
+let resolvedCookiesFilePath = null;
+let cookiesSourceHash = null;
+let cookieWarningLogged = false;
 
 function getYtDlpSharedArgs(options = {}) {
     const { includeFfmpeg = false } = options;
@@ -254,11 +267,69 @@ function getYtDlpSharedArgs(options = {}) {
         sharedArgs.push('--extractor-args', configuredExtractorArgs);
     }
 
+    const cookiesPath = getYtDlpCookiesFilePath();
+    if (cookiesPath) {
+        sharedArgs.push('--cookies', cookiesPath);
+    }
+
     if (includeFfmpeg && ffmpegBinary) {
         sharedArgs.push('--ffmpeg-location', ffmpegBinary);
     }
 
     return sharedArgs;
+}
+
+function resolveCookiesRawContent() {
+    if (configuredCookiesInline) {
+        return configuredCookiesInline;
+    }
+
+    if (configuredCookiesBase64) {
+        return Buffer.from(configuredCookiesBase64, 'base64').toString('utf8');
+    }
+
+    return '';
+}
+
+function getYtDlpCookiesFilePath() {
+    if (configuredCookiesPath) {
+        return configuredCookiesPath;
+    }
+
+    if (!configuredCookiesInline && !configuredCookiesBase64) {
+        return null;
+    }
+
+    try {
+        const rawContent = resolveCookiesRawContent();
+        if (!rawContent) {
+            return null;
+        }
+
+        const nextHash = crypto.createHash('sha256').update(rawContent).digest('hex');
+        if (
+            resolvedCookiesFilePath
+            && cookiesSourceHash === nextHash
+            && fs.existsSync(resolvedCookiesFilePath)
+        ) {
+            return resolvedCookiesFilePath;
+        }
+
+        fs.mkdirSync(cookiesRuntimeDir, { recursive: true });
+        const filePath = path.join(cookiesRuntimeDir, 'yt-dlp-cookies.txt');
+        fs.writeFileSync(filePath, rawContent, { encoding: 'utf8', mode: 0o600 });
+
+        resolvedCookiesFilePath = filePath;
+        cookiesSourceHash = nextHash;
+        return filePath;
+    } catch (error) {
+        if (!cookieWarningLogged) {
+            cookieWarningLogged = true;
+            console.error('Failed to prepare yt-dlp cookies:', error.message);
+        }
+
+        return null;
+    }
 }
 
 function parseRetryExtractorArgsFromEnv() {
@@ -278,6 +349,20 @@ function parseRetryExtractorArgsFromEnv() {
 function shouldRetryYtDlpWithAlternateProfile(errorMessage) {
     const text = String(errorMessage || '').toLowerCase();
     return text.includes('http error 403') || text.includes('unable to download video data');
+}
+
+function getPublicYtDlpErrorMessage(rawMessage) {
+    const text = String(rawMessage || '').toLowerCase();
+
+    if (text.includes('sign in to confirm you\'re not a bot')) {
+        return 'YouTube requires authentication for this request. Configure YT_DLP_COOKIES_BASE64 or YT_DLP_COOKIES_PATH on the server and try again.';
+    }
+
+    if (text.includes('http error 403')) {
+        return 'YouTube blocked this download request (HTTP 403). Try again later or configure authenticated cookies.';
+    }
+
+    return normalizeYtDlpErrorMessage(rawMessage);
 }
 
 function buildYtDlpSharedArgProfiles(options = {}) {
@@ -842,6 +927,10 @@ function getYtDlpErrorStatus(message) {
         return 403;
     }
 
+    if (text.includes('sign in to confirm you\'re not a bot') || text.includes('http error 403')) {
+        return 403;
+    }
+
     if (text.includes('invalid argument') || text.includes('bad request') || text.includes('unable to download api page')) {
         return 400;
     }
@@ -978,10 +1067,11 @@ async function processDownloadJob(jobId, payload) {
             expiresAt: Date.now() + READY_JOB_TTL_MS
         });
     } catch (error) {
+        const message = getPublicYtDlpErrorMessage(error?.message || 'Internal Server Error');
         updateDownloadJob(jobId, {
             status: 'error',
             message: 'Failed to prepare file',
-            error: error.message || 'Internal Server Error',
+            error: message,
             expiresAt: Date.now() + ERROR_JOB_TTL_MS
         });
     }
@@ -1268,13 +1358,14 @@ router.get('/download-video', async (req, res) => {
         prepared = null;
     } catch (error) {
         console.error(error);
+        const message = getPublicYtDlpErrorMessage(error?.message || 'Internal Server Error');
 
         if (prepared?.filePath) {
             await removeFileQuietly(prepared.filePath);
         }
 
         if (!res.headersSent) {
-            res.status(500).json({ error: error.message || 'Internal Server Error' });
+            res.status(getYtDlpErrorStatus(error?.message || message)).json({ error: message });
         }
     }
 });
@@ -1295,13 +1386,14 @@ router.get('/download-audio', async (req, res) => {
         prepared = null;
     } catch (error) {
         console.error(error);
+        const message = getPublicYtDlpErrorMessage(error?.message || 'Internal Server Error');
 
         if (prepared?.filePath) {
             await removeFileQuietly(prepared.filePath);
         }
 
         if (!res.headersSent) {
-            res.status(500).json({ error: error.message || 'Internal Server Error' });
+            res.status(getYtDlpErrorStatus(error?.message || message)).json({ error: message });
         }
     }
 });
