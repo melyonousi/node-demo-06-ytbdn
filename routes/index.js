@@ -6,6 +6,13 @@ const path = require('path');
 const crypto = require('crypto');
 const YTDlpWrap = require('yt-dlp-wrap').default;
 const { spawn, spawnSync } = require('child_process');
+let ytDlpStaticBinary = null;
+
+try {
+    ytDlpStaticBinary = require('yt-dlp-static');
+} catch (_) {
+    ytDlpStaticBinary = null;
+}
 
 const isVercelRuntime = Boolean(process.env.VERCEL || process.env.NOW_REGION);
 const writableRuntimeDir = process.env.YTBDN_RUNTIME_DIR
@@ -46,6 +53,10 @@ function resolveYtDlpCommand() {
 
     if (process.env.YT_DLP_PATH) {
         candidates.push({ command: process.env.YT_DLP_PATH, baseArgs: [] });
+    }
+
+    if (ytDlpStaticBinary && fs.existsSync(ytDlpStaticBinary)) {
+        candidates.push({ command: ytDlpStaticBinary, baseArgs: [] });
     }
 
     if (fs.existsSync(localYtDlpBinary)) {

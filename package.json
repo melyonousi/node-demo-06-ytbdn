@@ -18,6 +18,7 @@
     "dependencies": {
         "cors": "^2.8.5",
         "express": "~4.16.1",
+        "yt-dlp-static": "^1.0.6",
         "yt-dlp-wrap": "^2.3.12",
         "ytdl-core": "^4.9.1",
         "ytpl": "^2.2.3"
