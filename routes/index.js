@@ -1225,7 +1225,9 @@ router.get('/search-video-audio', async (req, res) => {
         });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ error: error.message || 'Internal Server Error' });
+        const message = getPublicYtDlpErrorMessage(error?.message || 'Internal Server Error');
+        const status = getYtDlpErrorStatus(error?.message || message);
+        res.status(status).json({ error: message });
     }
 });
 
@@ -1271,7 +1273,9 @@ router.get('/search-audio', async (req, res) => {
         });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ error: error.message || 'Internal Server Error' });
+        const message = getPublicYtDlpErrorMessage(error?.message || 'Internal Server Error');
+        const status = getYtDlpErrorStatus(error?.message || message);
+        res.status(status).json({ error: message });
     }
 });
 
@@ -1336,8 +1340,8 @@ router.get('/search-playlist', async (req, res) => {
         });
     } catch (error) {
         console.error(error);
-        const message = normalizeYtDlpErrorMessage(error?.message || 'Internal Server Error');
-        const status = getYtDlpErrorStatus(message);
+        const message = getPublicYtDlpErrorMessage(error?.message || 'Internal Server Error');
+        const status = getYtDlpErrorStatus(error?.message || message);
         res.status(status).json({ error: message });
     }
 });
