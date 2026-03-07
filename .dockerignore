@@ -1,4 +1,10 @@
 node_modules
-vendor
+npm-debug.log
 .env
-storage/logs
+.env.*
+.git
+.gitignore
+bin
+tmp-downloads
+coverage
+dist

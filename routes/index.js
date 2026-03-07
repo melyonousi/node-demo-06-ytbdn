@@ -25,6 +25,18 @@ const CLEANUP_INTERVAL_MS = 60 * 1000;
 let resolvedYtDlpCommand = null;
 let ensureYtDlpPromise = null;
 
+router.use((_req, res, next) => {
+    res.setHeader('Cache-Control', 'no-store');
+    next();
+});
+
+router.get('/health', (_req, res) => {
+    res.status(200).json({
+        status: 'ok',
+        service: 'ytbdn-api'
+    });
+});
+
 function isCommandAvailable(command, baseArgs = []) {
     const result = spawnSync(command, [...baseArgs, '--version'], {
         stdio: 'ignore',

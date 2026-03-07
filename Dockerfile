@@ -1,26 +1,28 @@
-# Use a Node base image
-FROM node:18
+FROM node:20-bookworm-slim
 
-# Install Python and pip
-RUN apt-get update && apt-get install -y python3 python3-pip
+ENV NODE_ENV=production \
+    PORT=3000 \
+    YT_DLP_PATH=/usr/local/bin/yt-dlp
 
-# Install yt-dlp globally
-RUN pip3 install yt-dlp
-
-# (Optional) confirm the binary is accessible
-RUN ln -s /usr/local/bin/yt-dlp /usr/bin/yt-dlp
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates curl ffmpeg \
+    && rm -rf /var/lib/apt/lists/* \
+    && curl -fsSL https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp \
+    && chmod 0755 /usr/local/bin/yt-dlp
 
 WORKDIR /app
 
-# Copy your Node files and install
 COPY package*.json ./
-RUN npm install
+RUN npm ci --omit=dev \
+    && npm cache clean --force
 
-# Copy in the rest of your code
 COPY . .
 
-# Build (if needed)
-# RUN npm run build
+RUN mkdir -p /app/bin /app/tmp-downloads \
+    && chown -R node:node /app
+
+USER node
 
 EXPOSE 3000
-CMD ["npm", "start"]
+
+CMD ["node", "app.js"]
