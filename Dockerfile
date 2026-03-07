@@ -6,7 +6,7 @@ ENV NODE_ENV=production \
     YT_DLP_PATH=/usr/local/bin/yt-dlp
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ca-certificates ffmpeg python3 python3-venv \
+    && apt-get install -y --no-install-recommends ca-certificates curl ffmpeg python3 python3-venv \
     && rm -rf /var/lib/apt/lists/* \
     && python3 -m venv /opt/yt-dlp \
     && /opt/yt-dlp/bin/pip install --no-cache-dir --upgrade pip \
