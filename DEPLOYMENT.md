@@ -19,6 +19,7 @@ Copy from `.env.example` and set real values.
 - `FRONT_URL`: public frontend URL
 - `CORS_ALLOWED_ORIGINS`: comma-separated frontend origins allowed to call the API directly
 - `TRUST_PROXY=true`: keeps protocol and client IP correct behind Coolify and Cloudflare
+- `YT_DLP_COOKIES_BASE64` or `YT_DLP_COOKIES_PATH`: required when YouTube blocks anonymous requests from the server IP
 
 ## Notes
 

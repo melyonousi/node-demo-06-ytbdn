@@ -15,6 +15,7 @@ const localYtDlpBinary = path.join(
 );
 
 const tempDownloadDir = path.join(__dirname, '..', 'tmp-downloads');
+const generatedCookiesFilePath = path.join(__dirname, '..', 'bin', 'yt-dlp-cookies.txt');
 
 const downloadJobs = new Map();
 const READY_JOB_TTL_MS = 20 * 60 * 1000;
@@ -25,6 +26,7 @@ const CLEANUP_INTERVAL_MS = 60 * 1000;
 let resolvedYtDlpCommand = null;
 let ensureYtDlpPromise = null;
 let lastYtDlpResolutionError = null;
+let resolvedCookiesPath = null;
 
 router.use((_req, res, next) => {
     res.setHeader('Cache-Control', 'no-store');
@@ -92,6 +94,37 @@ function resolveYtDlpCommand() {
 
     lastYtDlpResolutionError = failures.join(' | ');
     return null;
+}
+
+function resolveYtDlpCookiesPath() {
+    if (resolvedCookiesPath) {
+        return resolvedCookiesPath;
+    }
+
+    const explicitPath = String(process.env.YT_DLP_COOKIES_PATH || '').trim();
+    if (explicitPath) {
+        if (!fs.existsSync(explicitPath)) {
+            throw new Error(`YT_DLP_COOKIES_PATH does not exist: ${explicitPath}`);
+        }
+
+        resolvedCookiesPath = explicitPath;
+        return explicitPath;
+    }
+
+    const base64Cookies = String(process.env.YT_DLP_COOKIES_BASE64 || '').trim();
+    const plainCookies = process.env.YT_DLP_COOKIES;
+    const cookieContent = base64Cookies
+        ? Buffer.from(base64Cookies, 'base64').toString('utf8')
+        : plainCookies;
+
+    if (!cookieContent || !String(cookieContent).trim()) {
+        return null;
+    }
+
+    fs.mkdirSync(path.dirname(generatedCookiesFilePath), { recursive: true });
+    fs.writeFileSync(generatedCookiesFilePath, String(cookieContent), { mode: 0o600 });
+    resolvedCookiesPath = generatedCookiesFilePath;
+    return generatedCookiesFilePath;
 }
 
 async function ensureYtDlpBinary() {
@@ -257,13 +290,20 @@ function getMp3QualityValue(audioQuality) {
 const hasNodeJsRuntime = isCommandAvailable('node');
 
 function getYtDlpSharedArgs() {
-    const sharedArgs = [
-        '--extractor-args',
-        'youtube:player_client=android_sdkless'
-    ];
+    const sharedArgs = [];
 
-    if (hasNodeJsRuntime) {
+    if (hasNodeJsRuntime.ok) {
         sharedArgs.unshift('--js-runtimes', 'node');
+    }
+
+    const extractorArgs = String(process.env.YT_DLP_EXTRACTOR_ARGS || '').trim();
+    if (extractorArgs) {
+        sharedArgs.push('--extractor-args', extractorArgs);
+    }
+
+    const cookiesPath = resolveYtDlpCookiesPath();
+    if (cookiesPath) {
+        sharedArgs.push('--cookies', cookiesPath);
     }
 
     return sharedArgs;
@@ -778,6 +818,17 @@ function normalizeYtDlpErrorMessage(rawMessage) {
     return lines[lines.length - 1];
 }
 
+function decorateYtDlpErrorMessage(message) {
+    const normalized = normalizeYtDlpErrorMessage(message);
+    const lower = normalized.toLowerCase();
+
+    if (lower.includes('sign in to confirm you') || lower.includes('use --cookies-from-browser or --cookies')) {
+        return `${normalized} Configure YT_DLP_COOKIES_PATH, YT_DLP_COOKIES_BASE64, or YT_DLP_COOKIES on the API server.`;
+    }
+
+    return normalized;
+}
+
 function getYtDlpErrorStatus(message) {
     const text = String(message || '').toLowerCase();
 
@@ -786,6 +837,10 @@ function getYtDlpErrorStatus(message) {
     }
 
     if (text.includes('private')) {
+        return 403;
+    }
+
+    if (text.includes('sign in to confirm you')) {
         return 403;
     }
 
@@ -928,7 +983,7 @@ async function processDownloadJob(jobId, payload) {
         updateDownloadJob(jobId, {
             status: 'error',
             message: 'Failed to prepare file',
-            error: error.message || 'Internal Server Error',
+            error: decorateYtDlpErrorMessage(error.message || 'Internal Server Error'),
             expiresAt: Date.now() + ERROR_JOB_TTL_MS
         });
     }
@@ -1082,7 +1137,9 @@ router.get('/search-video-audio', async (req, res) => {
         });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ error: error.message || 'Internal Server Error' });
+        const message = decorateYtDlpErrorMessage(error?.message || 'Internal Server Error');
+        const status = getYtDlpErrorStatus(message);
+        res.status(status).json({ error: message });
     }
 });
 
@@ -1128,7 +1185,9 @@ router.get('/search-audio', async (req, res) => {
         });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ error: error.message || 'Internal Server Error' });
+        const message = decorateYtDlpErrorMessage(error?.message || 'Internal Server Error');
+        const status = getYtDlpErrorStatus(message);
+        res.status(status).json({ error: message });
     }
 });
 
@@ -1193,7 +1252,7 @@ router.get('/search-playlist', async (req, res) => {
         });
     } catch (error) {
         console.error(error);
-        const message = normalizeYtDlpErrorMessage(error?.message || 'Internal Server Error');
+        const message = decorateYtDlpErrorMessage(error?.message || 'Internal Server Error');
         const status = getYtDlpErrorStatus(message);
         res.status(status).json({ error: message });
     }
@@ -1221,7 +1280,9 @@ router.get('/download-video', async (req, res) => {
         }
 
         if (!res.headersSent) {
-            res.status(500).json({ error: error.message || 'Internal Server Error' });
+            const message = decorateYtDlpErrorMessage(error?.message || 'Internal Server Error');
+            const status = getYtDlpErrorStatus(message);
+            res.status(status).json({ error: message });
         }
     }
 });
@@ -1248,7 +1309,9 @@ router.get('/download-audio', async (req, res) => {
         }
 
         if (!res.headersSent) {
-            res.status(500).json({ error: error.message || 'Internal Server Error' });
+            const message = decorateYtDlpErrorMessage(error?.message || 'Internal Server Error');
+            const status = getYtDlpErrorStatus(message);
+            res.status(status).json({ error: message });
         }
     }
 });
