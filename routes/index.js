@@ -1150,9 +1150,12 @@ router.get('/search-audio', async (req, res) => {
             return res.status(400).json({ error: 'URL parameter is required' });
         }
 
-        const info = await getYtDlpInfo(url, ['--extract-audio']);
+        // Metadata lookup should not request extraction/conversion. We only need
+        // the available formats here and will do the actual mp3 conversion later.
+        const info = await getYtDlpInfo(url);
 
-        const arrayAudio = info.formats.filter((fmt) => {
+        const formats = Array.isArray(info?.formats) ? info.formats : [];
+        const arrayAudio = formats.filter((fmt) => {
             if (!fmt.url) return false;
             if (fmt.vcodec !== 'none') return false;
             if (isManifestProtocol(fmt.protocol)) return false;
