@@ -2,13 +2,17 @@ FROM node:20-bookworm-slim
 
 ENV NODE_ENV=production \
     PORT=3000 \
+    PATH=/opt/yt-dlp/bin:${PATH} \
     YT_DLP_PATH=/usr/local/bin/yt-dlp
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ca-certificates curl ffmpeg \
+    && apt-get install -y --no-install-recommends ca-certificates ffmpeg python3 python3-venv \
     && rm -rf /var/lib/apt/lists/* \
-    && curl -fsSL https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp \
-    && chmod 0755 /usr/local/bin/yt-dlp
+    && python3 -m venv /opt/yt-dlp \
+    && /opt/yt-dlp/bin/pip install --no-cache-dir --upgrade pip \
+    && /opt/yt-dlp/bin/pip install --no-cache-dir yt-dlp \
+    && ln -s /opt/yt-dlp/bin/yt-dlp /usr/local/bin/yt-dlp \
+    && /usr/local/bin/yt-dlp --version
 
 WORKDIR /app
 

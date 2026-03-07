@@ -24,6 +24,7 @@ const CLEANUP_INTERVAL_MS = 60 * 1000;
 
 let resolvedYtDlpCommand = null;
 let ensureYtDlpPromise = null;
+let lastYtDlpResolutionError = null;
 
 router.use((_req, res, next) => {
     res.setHeader('Cache-Control', 'no-store');
@@ -39,11 +40,21 @@ router.get('/health', (_req, res) => {
 
 function isCommandAvailable(command, baseArgs = []) {
     const result = spawnSync(command, [...baseArgs, '--version'], {
-        stdio: 'ignore',
+        encoding: 'utf8',
         windowsHide: true
     });
 
-    return !result.error && result.status === 0;
+    if (!result.error && result.status === 0) {
+        return { ok: true };
+    }
+
+    return {
+        ok: false,
+        reason: result.error?.message
+            || String(result.stderr || '').trim()
+            || String(result.stdout || '').trim()
+            || `exit code ${result.status}`
+    };
 }
 
 function resolveYtDlpCommand() {
@@ -52,6 +63,7 @@ function resolveYtDlpCommand() {
     }
 
     const candidates = [];
+    const failures = [];
 
     if (process.env.YT_DLP_PATH) {
         candidates.push({ command: process.env.YT_DLP_PATH, baseArgs: [] });
@@ -68,12 +80,17 @@ function resolveYtDlpCommand() {
     candidates.push({ command: 'yt-dlp', baseArgs: [] });
 
     for (const candidate of candidates) {
-        if (isCommandAvailable(candidate.command, candidate.baseArgs)) {
+        const availability = isCommandAvailable(candidate.command, candidate.baseArgs);
+        if (availability.ok) {
+            lastYtDlpResolutionError = null;
             resolvedYtDlpCommand = candidate;
             return candidate;
         }
+
+        failures.push(`${candidate.command}: ${availability.reason}`);
     }
 
+    lastYtDlpResolutionError = failures.join(' | ');
     return null;
 }
 
@@ -105,7 +122,10 @@ async function ensureYtDlpBinary() {
         return downloaded;
     }
 
-    throw new Error('yt-dlp not found. Install it manually or set YT_DLP_PATH.');
+    const details = lastYtDlpResolutionError
+        ? ` Checked candidates: ${lastYtDlpResolutionError}`
+        : '';
+    throw new Error(`yt-dlp not found or not executable.${details}`);
 }
 
 function spawnYtDlp(args, options = {}) {
